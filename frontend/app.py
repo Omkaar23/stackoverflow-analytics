@@ -13,7 +13,7 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 df1 = pd.DataFrame()
 def load_data(query):
-    conn = psycopg2.connect(host='ec2-3-92-169-255.compute-1.amazonaws.com', dbname='postgres', user='postgres',password='')
+    conn = psycopg2.connect(host='YOUR_HOST', dbname='YOUR_DB', user='USERNAME',password='PASSWORD')
     #curr = conn.cursor()
     #tags_query = " SELECT DISTINCT * FROM df_Tags_Avg ;"
     df = pd.read_sql(query, conn)
