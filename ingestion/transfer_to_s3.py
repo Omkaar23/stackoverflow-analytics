@@ -48,7 +48,7 @@ if __name__ == '__main__':
             subprocess.call([process_7z_shell], shell=True)
             # use AWS CLI to bulk upload instead of boto3
             print('Uploading ' + dir_name + ' to S3...')
-            new_dir = dir_name + '/*.xml'
+            new_dir = dir_name + '/'
             s3.upload_file(filename, bucket_name, new_dir)
             os.remove(filename)
 
