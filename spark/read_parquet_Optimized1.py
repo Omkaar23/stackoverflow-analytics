@@ -44,40 +44,23 @@ def main():
 	df2.createOrReplaceTempView("pF2")
 
 	# df3 contains only the Posts form the top 100 tags ['_PostId', '_PostTag', '_Score']
-	df3 = spark.read.parquet('s3a://stack-overflow-parquet-processed/df3.parquet/')
+	df3 = spark.sql('SELECT pF1._PostId, pF1._PostTag, pF1._Score as _PostScore FROM pF1 WHERE pF1._PostTag IN (SELECT pF2._TagName FROM pF2)')
 	df3.show()
 	df3.createOrReplaceTempView('pF3')
 
-	df_Tags_avg = spark.sql("SELECT pF3._PostTag, CEIL(AVG(pF3._Score)) as _AvgScore from pF3 Group By pF3._PostTag Order By _AvgScore DESC")
-	df_Tags_avg.show()
-	df_Tags_avg.createOrReplaceTempView('pFT')
-	df_Tags_avg.write.mode('append').parquet('s3a://stack-overflow-parquet-processed/df_Tags_avg.parquet/')
-
 
 	# df4 contains a join of Posts and Exploded Tags ['_Id','_ParentId','_Score','_PostTypeId','_OwnerUserId','_PostId','_PostTag']
+	df4 = df.join(df3.select('_PostId','_PostTag'), (df._Id == df3._PostId), 'left').select('_Id','_ParentId','_Score','_PostTypeId','_OwnerUserId','_PostId','_PostTag')
+	df4.show()
+	df4.write.mode('append').parquet('s3a://stack-overflow-parquet-processed/df4.parquet/')
 	df4 = spark.read.parquet('s3a://stack-overflow-parquet-processed/df4.parquet/')
 	df4.createOrReplaceTempView('pF4')
-	df4.show(1000)
-
-
-	df5 = spark.sql("""SELECT pF4._Id, pF4._ParentId, pF4._Score, pF4._PostTypeId, pF4._PostTag, pF4._OwnerUserId \
-	 					FROM pF4 \
-	 					WHERE (pF4._Id IN (SELECT pF3._PostId FROM pF3 WHERE pF3._PostTag = 'scala') OR pF4._ParentId IN (SELECT pF3._PostId FROM pF3 WHERE pF3._PostTag = 'scala')) and \
-	 						   pF4._Score < (SELECT pFT._AvgScore from pFT where pFT._PostTag = 'scala') \
-	 					 """)
-	df5.show(1000)
-	df5.createOrReplaceTempView('pF5')
+	
 
 	# df6 contains columns from Users table ['_UserId', '_Reputation', '_Views']
 	df6 = spark.read.parquet('s3a://stack-overflow-parquet-files/Users.parquet/').select(col('_Id').alias('_UserId'), '_Reputation')
 	df6.show()
 	df6.createOrReplaceTempView('pF6')
-
-
-	# df7 contins a join of Posts, Tags, Users ['_Id','_ParentId','_Score','_PostTypeId','_OwnerUserId','_PostId','_PostTag', '_Reputation']
-	#df7 = df4.join(df6.select('_Reputation').alias('_UserReputation'), (df4._OwnerUserId == df6._UserId), 'left')
-	#df7.show()
-
 
 
 	df7 = spark.sql(""" SELECT pF4._Id, pF4._ParentId, pF4._Score, pF4._PostTypeId, pF4._PostTag, pF4._OwnerUserId, pF6._Reputation as _UserReputation \
